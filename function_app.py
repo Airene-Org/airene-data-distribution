@@ -49,10 +49,13 @@ def test_function(message: func.ServiceBusMessage, msgout: func.Out[str], doc: f
         dict_data = transformed_df.to_dict(orient="records")
         dict_data[0]["id"] = str(uuid.uuid4())
 
+        # Convert from dict to JSON (by turning it back into a DataFrame)
+        df_transformed = pd.DataFrame(dict_data)
+        json_data = df_transformed.to_json(orient="records")
+
         # Set the reading to be saved
         reading = func.Document.from_dict(dict_data[0])
         doc.set(reading)  # Comment this out for dev purposes
-        json_data = transformed_df.to_json(orient="records")
         msgout.set(json_data)  # Comment this out for dev purpose
         logging.info("Message saved to Cosmos DB")
     except Exception as e:
@@ -76,7 +79,10 @@ def test_function(message: func.ServiceBusMessage, msgout: func.Out[str], doc: f
 )
 def test_function(req, message: func.Out[str]):
     df = pd.read_csv("cleaned.csv")
-    json_data = df.to_json(orient="records")
+    dict_data = df.to_dict(orient="records")
+    dict_data[0]["id"] = str(uuid.uuid4())
+    df_transformed = pd.DataFrame(dict_data)
+    json_data = df_transformed.to_json(orient="records")
     try:
         message.set(json_data)
         logging.info("Message Sent to queue")
