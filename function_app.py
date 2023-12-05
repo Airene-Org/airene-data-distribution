@@ -21,7 +21,13 @@ app = func.FunctionApp()
     connection="AzureCosmosDBConnectionString",
     createLeaseCollectionIfNotExists=True,
 )
-def test_function(message: func.ServiceBusMessage, doc: func.Out[func.Document]):
+@app.service_bus_topic_output(
+    topic_name="clean-data-cute",
+    arg_name="msgout",
+    queue_name="clean-data-cute",
+    connection="AzureServiceBusConnectionString",
+)
+def test_function(message: func.ServiceBusMessage, msgout: func.Out[str], doc: func.Out[func.Document]):
     message_body = message.get_body().decode("utf-8")
     logging.info("Received message: %s", message_body)
 
@@ -46,7 +52,8 @@ def test_function(message: func.ServiceBusMessage, doc: func.Out[func.Document])
         # Set the reading to be saved
         reading = func.Document.from_dict(dict_data[0])
         doc.set(reading)  # Comment this out for dev purposes
-
+        json_data = transformed_df.to_json(orient="records")
+        msgout.set(json_data)  # Comment this out for dev purpose
         logging.info("Message saved to Cosmos DB")
     except Exception as e:
         logging.error(f"Error in transforming or saving data: {e}")
@@ -58,6 +65,25 @@ def test_function(message: func.ServiceBusMessage, doc: func.Out[func.Document])
 # with open("message.json", "a") as outfile:
 #     json.dump(message_data, outfile)
 #     outfile.write("\n")  # Add a newline for each new message
+
+@app.function_name("test-function-servicebus-data-cleaned")
+@app.route("test-function-servicebus-cleaned", methods=["GET"])
+@app.service_bus_topic_output(
+    topic_name="clean-data-cute",
+    arg_name="message",
+    queue_name="clean-data-cute",
+    connection="AzureServiceBusConnectionString",
+)
+def test_function(req, message: func.Out[str]):
+    df = pd.read_csv("cleaned.csv")
+    json_data = df.to_json(orient="records")
+    try:
+        message.set(json_data)
+        logging.info("Message Sent to queue")
+        return func.HttpResponse("Message Sent to queue")
+    except Exception as e:
+        logging.error(f"Error in transforming or saving data: {e}")
+        func.HttpResponse("Error in transforming or saving data: {e}")
 
 
 class Transformer:
