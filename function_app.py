@@ -27,7 +27,18 @@ app = func.FunctionApp()
     queue_name="clean-data-cute",
     connection="AzureServiceBusConnectionString",
 )
-def test_function(message: func.ServiceBusMessage, msgout: func.Out[str], doc: func.Out[func.Document]):
+@app.service_bus_topic_output(
+    topic_name="to-predict-cute",
+    arg_name="to_predict",
+    queue_name="to-predict-cute",
+    connection="AzureServiceBusConnectionString",
+)
+def test_function(
+    message: func.ServiceBusMessage,
+    msgout: func.Out[str],
+    doc: func.Out[func.Document],
+    to_predict: func.Out[str],
+):
     message_body = message.get_body().decode("utf-8")
     logging.info("Received message: %s", message_body)
 
@@ -55,8 +66,15 @@ def test_function(message: func.ServiceBusMessage, msgout: func.Out[str], doc: f
 
         # Set the reading to be saved
         reading = func.Document.from_dict(dict_data[0])
+
+        # Outputting the message to respectively
+        # 1. Cosmos DB
+        # 2. Backend
+        # 3. Prediction Engine
+
         doc.set(reading)  # Comment this out for dev purposes
         msgout.set(json_data)  # Comment this out for dev purpose
+        to_predict.set(json_data)  # Comment this out for dev purpose
         logging.info("Message saved to Cosmos DB")
     except Exception as e:
         logging.error(f"Error in transforming or saving data: {e}")
@@ -68,6 +86,7 @@ def test_function(message: func.ServiceBusMessage, msgout: func.Out[str], doc: f
 # with open("message.json", "a") as outfile:
 #     json.dump(message_data, outfile)
 #     outfile.write("\n")  # Add a newline for each new message
+
 
 @app.function_name("test-function-servicebus-data-cleaned")
 @app.route("test-function-servicebus-cleaned", methods=["GET"])
