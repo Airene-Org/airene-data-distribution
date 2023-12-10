@@ -57,6 +57,26 @@ def test_function(
         transformed_df = transformer.transform(df)
         logging.info("Transformed DataFrame structure: %s", transformed_df.dtypes)
 
+        # normalize the air quality data and add it to the dataframe
+        transformed_df['co_norm'] = (transformed_df['current.air_quality.co'] - transformed_df['current.air_quality.co'].min()) / (
+                transformed_df['current.air_quality.co'].max() - transformed_df['current.air_quality.co'].min())
+        transformed_df['no2_norm'] = (transformed_df['current.air_quality.no2'] - transformed_df['current.air_quality.no2'].min()) / (
+                transformed_df['current.air_quality.no2'].max() - transformed_df['current.air_quality.no2'].min())
+        transformed_df['o3_norm'] = (transformed_df['current.air_quality.o3'] - transformed_df['current.air_quality.o3'].min()) / (
+                transformed_df['current.air_quality.o3'].max() - transformed_df['current.air_quality.o3'].min())
+        transformed_df['pm10_norm'] = (transformed_df['current.air_quality.pm10'] - transformed_df['current.air_quality.pm10'].min()) / (
+                transformed_df['current.air_quality.pm10'].max() - transformed_df['current.air_quality.pm10'].min())
+        transformed_df['pm25_norm'] = (transformed_df['current.air_quality.pm2_5'] - transformed_df['current.air_quality.pm2_5'].min()) / (
+                transformed_df['current.air_quality.pm2_5'].max() - transformed_df['current.air_quality.pm2_5'].min())
+        transformed_df['so2_norm'] = (transformed_df['current.air_quality.so2'] - transformed_df['current.air_quality.so2'].min()) / (
+                transformed_df['current.air_quality.so2'].max() - transformed_df['current.air_quality.so2'].min())
+        transformed_df['p1_norm'] = (transformed_df['p1'] - transformed_df['p1'].min()) / (transformed_df['p1'].max() - transformed_df['p1'].min())
+        transformed_df['p2_norm'] = (transformed_df['p2'] - transformed_df['p2'].min()) / (transformed_df['p2'].max() - transformed_df['p2'].min())
+
+        transformed_df['air_quality'] = transformed_df[['co_norm', 'no2_norm', 'o3_norm', 'pm10_norm', 'pm25_norm', 'so2_norm']].mean(axis=1)
+        transformed_df = df.drop(['co_norm', 'no2_norm', 'o3_norm', 'pm10_norm', 'pm25_norm', 'so2_norm', 'p1_norm', 'p2_norm'],
+                     axis=1)
+
         dict_data = transformed_df.to_dict(orient="records")
         dict_data[0]["id"] = str(uuid.uuid4())
 
@@ -98,6 +118,26 @@ def test_function(
 )
 def test_function(req, message: func.Out[str]):
     df = pd.read_csv("cleaned.csv")
+
+    # normalize the air quality data and add it to the dataframe
+    df['co_norm'] = (df['current.air_quality.co'] - df['current.air_quality.co'].min()) / (
+                df['current.air_quality.co'].max() - df['current.air_quality.co'].min())
+    df['no2_norm'] = (df['current.air_quality.no2'] - df['current.air_quality.no2'].min()) / (
+                df['current.air_quality.no2'].max() - df['current.air_quality.no2'].min())
+    df['o3_norm'] = (df['current.air_quality.o3'] - df['current.air_quality.o3'].min()) / (
+                df['current.air_quality.o3'].max() - df['current.air_quality.o3'].min())
+    df['pm10_norm'] = (df['current.air_quality.pm10'] - df['current.air_quality.pm10'].min()) / (
+                df['current.air_quality.pm10'].max() - df['current.air_quality.pm10'].min())
+    df['pm25_norm'] = (df['current.air_quality.pm2_5'] - df['current.air_quality.pm2_5'].min()) / (
+                df['current.air_quality.pm2_5'].max() - df['current.air_quality.pm2_5'].min())
+    df['so2_norm'] = (df['current.air_quality.so2'] - df['current.air_quality.so2'].min()) / (
+                df['current.air_quality.so2'].max() - df['current.air_quality.so2'].min())
+    df['p1_norm'] = (df['p1'] - df['p1'].min()) / (df['p1'].max() - df['p1'].min())
+    df['p2_norm'] = (df['p2'] - df['p2'].min()) / (df['p2'].max() - df['p2'].min())
+
+    df['air_quality'] = df[['co_norm', 'no2_norm', 'o3_norm', 'pm10_norm', 'pm25_norm', 'so2_norm']].mean(axis=1)
+    df = df.drop(['co_norm', 'no2_norm', 'o3_norm', 'pm10_norm', 'pm25_norm', 'so2_norm', 'p1_norm', 'p2_norm'], axis=1)
+
     dict_data = df.to_dict(orient="records")
     dict_data[0]["id"] = str(uuid.uuid4())
     df_transformed = pd.DataFrame(dict_data)
