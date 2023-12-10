@@ -29,7 +29,7 @@ app = func.FunctionApp()
 )
 @app.service_bus_topic_output(
     topic_name="to-predict-cute",
-    arg_name="to_predict",
+    arg_name="topredict",
     queue_name="to-predict-cute",
     connection="AzureServiceBusConnectionString",
 )
@@ -37,7 +37,7 @@ def test_function(
     message: func.ServiceBusMessage,
     msgout: func.Out[str],
     doc: func.Out[func.Document],
-    to_predict: func.Out[str],
+    topredict: func.Out[str],
 ):
     message_body = message.get_body().decode("utf-8")
     logging.info("Received message: %s", message_body)
@@ -74,7 +74,7 @@ def test_function(
 
         doc.set(reading)  # Comment this out for dev purposes
         msgout.set(json_data)  # Comment this out for dev purpose
-        to_predict.set(json_data)  # Comment this out for dev purpose
+        topredict.set(json_data)  # Comment this out for dev purpose
         logging.info("Message saved to Cosmos DB")
     except Exception as e:
         logging.error(f"Error in transforming or saving data: {e}")
