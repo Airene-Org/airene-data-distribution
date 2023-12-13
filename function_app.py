@@ -93,7 +93,7 @@ def test_function(
 @app.service_bus_topic_output(
     topic_name="clean-data-cute",
     arg_name="message",
-    queue_name="clean-data-cute",
+    queue_name="clean-data-queue-dev",
     connection="AzureServiceBusConnectionString",
 )
 def test_function(req, message: func.Out[str]):
