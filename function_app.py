@@ -99,7 +99,8 @@ def test_function(
 def test_function(req, message: func.Out[str]):
     df = pd.read_csv("cleaned.csv")
     dict_data = df.to_dict(orient="records")
-    dict_data[0]["id"] = str(uuid.uuid4())
+    for each in dict_data:
+        each["id"] = str(uuid.uuid4())
     df_transformed = pd.DataFrame(dict_data)
     json_data = df_transformed.to_json(orient="records")
     try:
