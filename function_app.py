@@ -33,11 +33,11 @@ app = func.FunctionApp()
     queue_name="to-predict-cute",
     connection="AzureServiceBusConnectionString",
 )
-def test_function(
-    message: func.ServiceBusMessage,
-    msgout: func.Out[str],
-    doc: func.Out[func.Document],
-    topredict: func.Out[str],
+def data_distribution_function(
+        message: func.ServiceBusMessage,
+        msgout: func.Out[str],
+        doc: func.Out[func.Document],
+        topredict: func.Out[str],
 ):
     message_body = message.get_body().decode("utf-8")
     logging.info("Received message: %s", message_body)
@@ -62,6 +62,13 @@ def test_function(
 
         # Convert from dict to JSON (by turning it back into a DataFrame)
         df_transformed = pd.DataFrame(dict_data)
+
+        # Backend needs the AQI values, these are calculated model side as well
+        backend_json = transformer.add_air_quality_indices(df_transformed)
+        backend_json.timestamp = pd.to_datetime(backend_json.timestamp)
+        backend_json = backend_json.to_json(orient="records")
+
+        # Prediction engine is just the raw data
         json_data = df_transformed.to_json(orient="records")
 
         # Set the reading to be saved
@@ -73,7 +80,7 @@ def test_function(
         # 3. Prediction Engine
 
         doc.set(reading)  # Comment this out for dev purposes
-        msgout.set(json_data)  # Comment this out for dev purpose
+        msgout.set(backend_json)  # Comment this out for dev purpose
         topredict.set(json_data)  # Comment this out for dev purpose
         logging.info("Message saved to Cosmos DB")
     except Exception as e:
@@ -102,6 +109,9 @@ def test_function(req, message: func.Out[str]):
     for each in dict_data:
         each["id"] = str(uuid.uuid4())
     df_transformed = pd.DataFrame(dict_data)
+    transformer = Transformer()
+    df_transformed = transformer.add_air_quality_indices(df_transformed)
+    df_transformed.timestamp = pd.to_datetime(df_transformed.timestamp)
     json_data = df_transformed.to_json(orient="records")
     try:
         message.set(json_data)
@@ -141,7 +151,6 @@ class Transformer:
             "country",
             *[f"sensor {i}" for i in range(2, 13)],  # sensor 2 to 12
         ]
-
         return df.drop(columns=columns_to_drop)
 
     def convert_string_to_json(self, s):
@@ -185,3 +194,41 @@ class Transformer:
         df = pd.concat([df, exploded], axis=1)
         df = df.drop(columns=[column])
         return df
+
+    def add_air_quality_indices(self,local_df):
+        """
+        Add air quality indices to the dataframe
+
+        :param local_df: The dataframe to add the indices to
+
+        :return: The dataframe with the indices added
+        """
+
+        # European Air Quality Standards
+        standards = pd.DataFrame(
+            [[20, 125, 40, 40, 10000, 120]], columns=["pm25", "so2", "no2", "pm10", "co", "o3"]
+        )
+
+        column_mappings = {
+            "co": "current.air_quality.co",
+            "no2": "current.air_quality.no2",
+            "o3": "current.air_quality.o3",
+            "so2": "current.air_quality.so2",
+            "pm25": "current.air_quality.pm2_5",
+            "pm10": "current.air_quality.pm10",
+        }
+
+        def aqi_(column_name: str):
+            mapped_name = column_mappings.get(column_name)
+            return local_df[mapped_name] / standards[column_name].values[0] * 100
+
+        for column in column_mappings.keys():
+            local_df[f"{column}_aqi"] = aqi_(column)
+
+        aqi_columns = [f"{column}_aqi" for column in column_mappings.keys()]
+        is_series = type(local_df) == pd.Series
+
+        # Iterate each row if it is a dataframe, else iterate each column if it is a series (single row)
+        local_df['aqi'] = local_df[aqi_columns].mean(axis=1 if not is_series else 0)
+
+        return local_df
