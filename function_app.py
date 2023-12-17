@@ -65,7 +65,7 @@ def data_distribution_function(
 
         # Backend needs the AQI values, these are calculated model side as well
         backend_json = transformer.add_air_quality_indices(df_transformed)
-        backend_json.timestamp = pd.to_datetime(backend_json.timestamp)
+        backend_json.timestamp = pd.to_datetime(backend_json.timestamp, unit="ms")
         backend_json = backend_json.to_json(orient="records")
 
         # Prediction engine is just the raw data
@@ -111,7 +111,7 @@ def test_function(req, message: func.Out[str]):
     df_transformed = pd.DataFrame(dict_data)
     transformer = Transformer()
     df_transformed = transformer.add_air_quality_indices(df_transformed)
-    df_transformed.timestamp = pd.to_datetime(df_transformed.timestamp)
+    df_transformed.timestamp = pd.to_datetime(df_transformed.timestamp, unit="ms")
     json_data = df_transformed.to_json(orient="records")
     try:
         message.set(json_data)
