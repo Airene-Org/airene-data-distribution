@@ -109,7 +109,9 @@ def test_function(req, message: func.Out[str]):
     df_transformed = pd.DataFrame(dict_data)
     transformer = Transformer()
     df_transformed = transformer.add_air_quality_indices(df_transformed)
-    df_transformed.timestamp = pd.to_datetime(df_transformed.timestamp, unit="ms")
+    df_transformed.timestamp = pd.to_datetime(df_transformed.timestamp)
+    df_transformed.timestamp = df_transformed.timestamp.astype("int64") // 10 ** 6
+
     json_data = df_transformed.to_json(orient="records")
     try:
         message.set(json_data)
@@ -136,7 +138,8 @@ def test_function(req, message: func.Out[str]):
     df_transformed = pd.DataFrame(dict_data)
     transformer = Transformer()
     df_transformed = transformer.add_air_quality_indices(df_transformed)
-    df_transformed.timestamp = pd.to_datetime(df_transformed.timestamp, unit="ms")
+    df_transformed.timestamp = pd.to_datetime(df_transformed.timestamp)
+    df_transformed.timestamp = df_transformed.timestamp.astype("int64") // 10 ** 6
     json_data = df_transformed.to_json(orient="records")
     try:
         message.set(json_data)
