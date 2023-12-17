@@ -95,6 +95,31 @@ def data_distribution_function(
 #     outfile.write("\n")  # Add a newline for each new message
 
 
+@app.function_name("test-function-servicebus-data-cleaned-with-ids-30-rows")
+@app.route("test-function-servicebus-cleaned-with-ids-limited-rows", methods=["GET"])
+@app.service_bus_topic_output(
+    topic_name="clean-data-cute",
+    arg_name="message",
+    queue_name="clean-data-queue-dev",
+    connection="AzureServiceBusConnectionString",
+)
+def test_function(req, message: func.Out[str]):
+    df = pd.read_csv("cleaned-with-ids.csv")
+    dict_data = df.to_dict(orient="records")
+    df_transformed = pd.DataFrame(dict_data)
+    transformer = Transformer()
+    df_transformed = transformer.add_air_quality_indices(df_transformed)
+    df_transformed.timestamp = pd.to_datetime(df_transformed.timestamp, unit="ms")
+    json_data = df_transformed.to_json(orient="records")
+    try:
+        message.set(json_data)
+        logging.info("Message Sent to queue")
+        return func.HttpResponse("Message Sent to queue")
+    except Exception as e:
+        logging.error(f"Error in transforming or saving data: {e}")
+        func.HttpResponse("Error in transforming or saving data: {e}")
+
+
 @app.function_name("test-function-servicebus-data-cleaned")
 @app.route("test-function-servicebus-cleaned", methods=["GET"])
 @app.service_bus_topic_output(
@@ -120,7 +145,6 @@ def test_function(req, message: func.Out[str]):
     except Exception as e:
         logging.error(f"Error in transforming or saving data: {e}")
         func.HttpResponse("Error in transforming or saving data: {e}")
-
 
 class Transformer:
     """
